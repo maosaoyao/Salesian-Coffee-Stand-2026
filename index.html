@@ -200,6 +200,9 @@
             gap: 10px;
             height: 72px;
         }
+        @media (min-width: 700px) {
+            .action-grid { height: 130px; }
+        }
         .btn-checkout {
             background: var(--secondary);
             color: white;
@@ -217,6 +220,10 @@
         }
         .btn-checkout:active { background: #008cc2; }
         .btn-checkout:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        @media (min-width: 700px) {
+            .btn-checkout { font-size: 1.8rem; border-radius: 18px; }
+            .btn-clear { font-size: 1.2rem; border-radius: 18px; }
+        }
         .btn-clear {
             background: #e2e8f0;
             color: #4a5568;
