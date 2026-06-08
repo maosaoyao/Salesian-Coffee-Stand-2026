@@ -319,7 +319,7 @@
         </div>
 
         <div class="card">
-            <h2>② カート確認 (<span id="pos-today-label">今日の日付</span>)</h2>
+            <h2>② カート確認 🛒(<span id="pos-today-label">今日の日付</span>)</h2>
             <div class="cart-list" id="cart-list"></div>
 
             <div class="total-box">
@@ -478,7 +478,7 @@
 
     function getTodayString() {
         const d = new Date();
-        return `${d.getMonth() + 1}月${d.getDate()}日(${WEEKS[d.getDay()]})`;
+        return `${d.getMonth() + 1}月${d.getDate()}日(${WEEKS[d.getDay]})`;
     }
 
     let todayKey = getTodayString();
