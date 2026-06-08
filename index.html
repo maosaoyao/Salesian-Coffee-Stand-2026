@@ -478,7 +478,7 @@
 
     function getTodayString() {
         const d = new Date();
-        return `${d.getMonth() + 1}月${d.getDate()}日(${WEEKS[d.getDay]})`;
+        return `${d.getMonth() + 1}月${d.getDate()}日${WEEKS[d.getDay()]}`;
     }
 
     let todayKey = getTodayString();
