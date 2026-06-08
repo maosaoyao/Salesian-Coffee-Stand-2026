@@ -293,7 +293,7 @@
         .report-table { width: 100%; border-collapse: collapse; }
         .report-table th, .report-table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.82rem; }
         .report-table th { background: #edf2f7; color: var(--primary); font-weight: bold; position: sticky; top: 0; }
-        .table-wrapper { overflow-x: auto; max-height: 300px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
+        .table-wrapper { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
 
 
         /* 品目別 2日間比較テーブル */
@@ -743,10 +743,8 @@
             const h = hourlySum[s.key];
             return `<tr><td><strong>${s.labelClean}</strong></td><td>${h.ice_coffee}</td><td>${h.hot_coffee}</td><td>${h.chocolate_cake}</td><td>${h.ice_cream}</td><td style="font-weight:bold;">¥${h.cash.toLocaleString()}</td><td style="color:var(--success); font-weight:bold;">${h.customers}組</td></tr>`;
         }).join('');
-        if(hourlySum.other.cash > 0) {
-            const o = hourlySum.other;
-            hHtml += `<tr style="background:#fff5f5; color:var(--danger);"><td><strong>時間外</strong></td><td>${o.ice_coffee}</td><td>${o.hot_coffee}</td><td>${o.chocolate_cake}</td><td>${o.ice_cream}</td><td>¥${o.cash.toLocaleString()}</td><td>${o.customers}組</td></tr>`;
-        }
+        const o = hourlySum.other;
+        hHtml += `<tr style="background:#fff5f5; color:var(--danger);"><td><strong>⚠️ 時間外</strong></td><td>${o.ice_coffee}</td><td>${o.hot_coffee}</td><td>${o.chocolate_cake}</td><td>${o.ice_cream}</td><td>¥${o.cash.toLocaleString()}</td><td>${o.customers}組</td></tr>`;
         document.getElementById('hourly-tbody').innerHTML = hHtml;
 
         document.getElementById('pattern-set').innerText = `${patterns.set} 回`;
