@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Salesian Setagaya Coffee Stand - POS SYSTEM</title>
+    <title>Salegian Setagaya Coffee Stand - POS SYSTEM</title>
     <style>
         :root {
             --primary: #0a2540;
@@ -125,13 +125,14 @@
             .btn-touch-menu {
                 font-size: 1.5rem;
                 min-height: unset;
-                height: 160px;
+                height: 100%;
             }
             .menu-grid {
+                flex: 1;
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                grid-template-rows: 160px 160px;
-                gap: 10px;
+                grid-template-rows: 1fr 1fr;
+                height: 100%;
             }
         }
         .btn-touch-menu:active { transform: scale(0.96); filter: brightness(0.9); }
@@ -166,8 +167,9 @@
         }
         @media (min-width: 700px) {
             .cart-list {
-                flex: 1;
-                max-height: none;
+                flex: none;
+                height: 240px;
+                max-height: 240px;
             }
         }
 
@@ -293,7 +295,7 @@
 <body>
 
 <div class="navbar">
-    <h1>Salesian Setagaya Coffee Stand</h1>
+    <h1>Salegian Setagaya Coffee Stand</h1>
     <button class="btn-admin-trigger" id="nav-btn" onclick="toggleAdminView()">⚙️ 管理用</button>
 </div>
 
