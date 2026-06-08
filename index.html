@@ -319,7 +319,7 @@
         </div>
 
         <div class="card">
-            <h2>② カート確認 🛒(<span id="pos-today-label">今日の日付</span>)</h2>
+            <h2>② カート確認 🛒 <span id="pos-today-label">今日の日付</span></h2>
             <div class="cart-list" id="cart-list"></div>
 
             <div class="total-box">
@@ -470,15 +470,14 @@
     const MENU_ITEMS = [
         { id: 'ice_coffee', name: 'アイスコーヒー', price: 150, icon: '🥤', btnClass: 'btn-ice-coffee' },
         { id: 'hot_coffee', name: 'ホットコーヒー', price: 150, icon: '☕', btnClass: 'btn-hot-coffee' },
-        { id: 'chocolate_cake', name: 'チョコケーキ', price: 200, icon: '🍫🍰', btnClass: 'btn-cake' },
+        { id: 'chocolate_cake', name: 'チョコケーキ', price: 200, icon: '🍰', btnClass: 'btn-cake' },
         { id: 'ice_cream', name: 'アイスクリーム', price: 400, icon: '🍨', btnClass: 'btn-ice-cream' }
     ];
 
-    const WEEKS = ["日", "月", "火", "水", "木", "金", "土"];
-
     function getTodayString() {
         const d = new Date();
-        return `${d.getMonth() + 1}月${d.getDate()}日${WEEKS[d.getDay()]}`;
+        const weeks = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+        return `${d.getMonth() + 1}月${d.getDate()}日${weeks[d.getDay()]}`;
     }
 
     let todayKey = getTodayString();
