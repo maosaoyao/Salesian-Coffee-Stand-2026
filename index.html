@@ -4,6 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Salesian Setagaya Coffee Stand - POS SYSTEM</title>
+
+    <!-- Firebase -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyA7fnKtCQnzEzfFKD4M85eVQFd264y_fwE",
+        authDomain: "salesian-coffe-stand-2026.firebaseapp.com",
+        databaseURL: "https://salesian-coffe-stand-2026-default-rtdb.firebaseio.com",
+        projectId: "salesian-coffe-stand-2026",
+        storageBucket: "salesian-coffe-stand-2026.firebasestorage.app",
+        messagingSenderId: "162133287378",
+        appId: "1:162133287378:web:2803537e44e0554963680b"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      window._fb = { db, ref, push, remove };
+
+      // リアルタイム監視
+      onValue(ref(db, 'sales'), (snapshot) => {
+        const raw = snapshot.val() || {};
+        const converted = {};
+        Object.entries(raw).forEach(([dateKey, txMap]) => {
+          converted[dateKey] = Object.entries(txMap).map(([fbKey, tx]) => ({ ...tx, _fbKey: fbKey }));
+        });
+        window._salesData = converted;
+        if (window._onDataReady) window._onDataReady(converted);
+      });
+    </script>
+
     <style>
         :root {
             --primary: #0a2540;
@@ -17,161 +50,66 @@
         html, body {
             height: 100%;
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             background: var(--bg-light);
             color: var(--text-dark);
             -webkit-user-select: none;
             user-select: none;
         }
-
-        body {
-            display: flex;
-            flex-direction: column;
-        }
+        body { display: flex; flex-direction: column; }
 
         .navbar {
-            background: var(--primary);
-            color: white;
+            background: var(--primary); color: white;
             padding: 8px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 10;
-            min-height: 45px;
-            box-sizing: border-box;
-            flex-shrink: 0;
+            z-index: 10; min-height: 45px; box-sizing: border-box; flex-shrink: 0;
         }
         .navbar h1 { margin: 0; font-size: 1rem; letter-spacing: 0.5px; }
         .btn-admin-trigger { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; white-space: nowrap; }
 
-        .page {
-            flex: 1;
-            padding: 10px;
-            width: 100%;
-            display: none;
-            box-sizing: border-box;
-            overflow-y: auto;
-        }
+        .page { flex: 1; padding: 10px; width: 100%; display: none; box-sizing: border-box; overflow-y: auto; }
         .page.active { display: block; }
 
-        /* ーーー POS画面 ーーー */
-        #page-pos.page.active {
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-        }
+        #page-pos.page.active { display: flex; flex-direction: column; padding: 10px; }
 
-        .pos-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-        }
-
-        /* PC幅では横並び */
+        .pos-grid { display: flex; flex-direction: column; gap: 10px; width: 100%; }
         @media (min-width: 700px) {
-            .pos-grid {
-                flex-direction: row;
-                height: calc(100vh - 65px);
-            }
-            .pos-grid .card {
-                flex: 1;
-                height: 100%;
-                overflow: hidden;
-            }
+            .pos-grid { flex-direction: row; height: calc(100vh - 65px); }
+            .pos-grid .card { flex: 1; height: 100%; overflow: hidden; }
             html, body { overflow: hidden; }
         }
 
-        .card {
-            background: white;
-            padding: 12px;
-            border-radius: 14px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-            border-top: 5px solid var(--primary);
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-        }
+        .card { background: white; padding: 12px; border-radius: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border-top: 5px solid var(--primary); display: flex; flex-direction: column; box-sizing: border-box; }
         .card h2 { margin-top: 0; margin-bottom: 8px; font-size: 1rem; color: var(--primary); border-bottom: 2px solid #edf2f7; padding-bottom: 4px; }
 
-        .menu-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (min-width: 700px) {
+            .menu-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 100%; }
         }
 
-        /* スマホでは商品ボタンを固定高さに */
         .btn-touch-menu {
-            border: 4px solid #cbd5e1;
-            padding: 12px 8px;
-            border-radius: 20px;
-            font-size: 1rem;
-            font-weight: 900;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.1s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            min-height: 130px;
-            box-sizing: border-box;
+            border: 4px solid #cbd5e1; padding: 12px 8px; border-radius: 20px;
+            font-size: 1rem; font-weight: 900; cursor: pointer; text-align: center;
+            transition: all 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            gap: 6px; min-height: 130px; box-sizing: border-box;
         }
-        @media (min-width: 700px) {
-            .btn-touch-menu {
-                font-size: 1.5rem;
-                min-height: unset;
-                height: 100%;
-            }
-            .menu-grid {
-                flex: 1;
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: 1fr 1fr;
-                height: 100%;
-            }
-        }
+        @media (min-width: 700px) { .btn-touch-menu { font-size: 1.5rem; min-height: unset; height: 100%; } }
         .btn-touch-menu:active { transform: scale(0.96); filter: brightness(0.9); }
         .btn-touch-menu .price { display: block; font-size: 1.6rem; font-weight: 900; }
-        @media (min-width: 700px) {
-            .btn-touch-menu .price { font-size: 2.8rem; }
-        }
+        @media (min-width: 700px) { .btn-touch-menu .price { font-size: 2.8rem; } }
 
         .btn-ice-coffee { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
         .btn-hot-coffee { background: #ffedd5; color: #9a3412; border-color: #fdba74; }
         .btn-cake       { background: #fdf2f8; color: #9d174d; border-color: #fbcfe8; }
         .btn-ice-cream  { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
 
-        .menu-icon {
-            font-size: 3rem;
-            line-height: 1;
-        }
-        @media (min-width: 700px) {
-            .menu-icon { font-size: 5rem; }
-        }
+        .menu-icon { font-size: 3rem; line-height: 1; }
+        @media (min-width: 700px) { .menu-icon { font-size: 5rem; } }
 
-        .cart-list {
-            min-height: 80px;
-            max-height: 220px;
-            margin-bottom: 10px;
-            border: 1px dashed #e2e8f0;
-            border-radius: 8px;
-            padding: 8px;
-            box-sizing: border-box;
-            background: #fafafa;
-            overflow-y: auto;
-        }
-        @media (min-width: 700px) {
-            .cart-list {
-                flex: none;
-                height: 240px;
-                max-height: 240px;
-            }
-        }
+        .cart-list { min-height: 80px; max-height: 220px; margin-bottom: 10px; border: 1px dashed #e2e8f0; border-radius: 8px; padding: 8px; box-sizing: border-box; background: #fafafa; overflow-y: auto; }
+        @media (min-width: 700px) { .cart-list { flex: none; height: 240px; max-height: 240px; } }
 
         .cart-placeholder { color: #a0aec0; text-align: center; padding-top: 20px; font-size: 1rem; }
         .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
@@ -182,71 +120,26 @@
         .cart-qty { font-size: 1.3rem; font-weight: bold; min-width: 28px; text-align: center; }
         .btn-del { background: none; border: none; color: var(--danger); font-size: 1.8rem; cursor: pointer; }
 
-        .total-box {
-            background: var(--primary);
-            color: white;
-            padding: 12px 10px;
-            border-radius: 14px;
-            text-align: center;
-            margin-bottom: 10px;
-            box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
-        }
+        .total-box { background: var(--primary); color: white; padding: 12px 10px; border-radius: 14px; text-align: center; margin-bottom: 10px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3); }
         .total-box .label { color: var(--secondary); font-weight: bold; font-size: 0.85rem; letter-spacing: 1px; display: block; margin-bottom: 4px; }
         .total-box .amount { font-size: 2.8rem; font-weight: 900; display: block; color: #fff; line-height: 1; }
 
-        .action-grid {
-            display: grid;
-            grid-template-columns: 3fr 1fr;
-            gap: 10px;
-            height: 72px;
-        }
-        @media (min-width: 700px) {
-            .action-grid { height: 130px; }
-        }
-        .btn-checkout {
-            background: var(--secondary);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 14px;
-            font-size: 1.4rem;
-            font-weight: 900;
-            cursor: pointer;
-            box-shadow: 0 4px 14px rgba(0,163,224,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
+        .action-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; height: 72px; }
+        @media (min-width: 700px) { .action-grid { height: 130px; } }
+
+        .btn-checkout { background: var(--secondary); color: white; border: none; padding: 10px; border-radius: 14px; font-size: 1.4rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 14px rgba(0,163,224,0.4); display: flex; align-items: center; justify-content: center; height: 100%; }
         .btn-checkout:active { background: #008cc2; }
         .btn-checkout:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
-        @media (min-width: 700px) {
-            .btn-checkout { font-size: 1.8rem; border-radius: 18px; }
-            .btn-clear { font-size: 1.2rem; border-radius: 18px; }
-        }
-        .btn-clear {
-            background: #e2e8f0;
-            color: #4a5568;
-            border: none;
-            border-radius: 14px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
+        @media (min-width: 700px) { .btn-checkout { font-size: 1.8rem; border-radius: 18px; } .btn-clear { font-size: 1.2rem; border-radius: 18px; } }
+        .btn-clear { background: #e2e8f0; color: #4a5568; border: none; border-radius: 14px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 100%; }
         .btn-clear:active { background: #cbd5e1; }
 
-        .toast-notification { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: rgba(10, 37, 64, 0.95); color: white; padding: 25px 40px; border-radius: 14px; font-size: 1.4rem; font-weight: bold; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.2s ease; border: 2px solid var(--secondary); }
+        .toast-notification { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: rgba(10,37,64,0.95); color: white; padding: 25px 40px; border-radius: 14px; font-size: 1.4rem; font-weight: bold; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.2s ease; border: 2px solid var(--secondary); }
         .toast-notification.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
         .toast-notification .icon { display: block; font-size: 2.5rem; margin-bottom: 8px; color: #4ade80; }
 
-        /* ーーー 管理画面 ーーー */
-        #page-admin {
-            overflow-y: auto;
-        }
+        /* 管理画面 */
+        #page-admin { overflow-y: auto; }
         .admin-card { background: white; padding: 16px; border-radius: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border-top: 5px solid var(--secondary); margin-bottom: 20px; }
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; flex-wrap: wrap; gap: 8px; }
         .admin-header h2 { margin: 0; color: var(--primary); font-size: 1.1rem; }
@@ -273,18 +166,24 @@
         .metric-box-sales .val { font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-top: 4px; }
         .metric-box-sales.total-active .val { color: #319795; }
 
-        .item-count-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-        @media (min-width: 500px) { .item-count-grid { grid-template-columns: repeat(4, 1fr); } }
-        .item-count-box { padding: 10px 6px; border-radius: 10px; text-align: center; font-weight: bold; border: 1px solid #e2e8f0; font-size: 0.85rem; }
-        .item-count-box .num { font-size: 1.4rem; font-weight: 900; margin-top: 4px; display: block; }
-
         .weather-analysis-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 15px; }
         .weather-bar-container { display: flex; height: 28px; border-radius: 8px; overflow: hidden; margin: 8px 0 4px 0; background: #e2e8f0; }
         .weather-bar-hot { background: #f97316; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; width: 50%; }
         .weather-bar-ice { background: #0ea5e9; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; width: 50%; }
 
-        .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        @media (min-width: 500px) { .analysis-grid { grid-template-columns: 1.2fr 1fr 1fr; } }
+        /* 品目別2日間比較テーブル */
+        .item-compare-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .item-compare-table th, .item-compare-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
+        .item-compare-table th { background: #edf2f7; color: var(--primary); font-weight: bold; }
+        .item-compare-table td:first-child { text-align: left; font-weight: bold; }
+        .item-compare-table tr.total-row { background: #e6fffa; font-weight: bold; color: #319795; }
+        .item-compare-table td.diff-up { color: #16a34a; font-weight: bold; }
+        .item-compare-table td.diff-down { color: var(--danger); font-weight: bold; }
+        .item-compare-table td.diff-same { color: #94a3b8; }
+
+        /* 購入スタイル分析 */
+        .analysis-grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        @media (min-width: 500px) { .analysis-grid-4 { grid-template-columns: repeat(4, 1fr); } }
         .analysis-box { padding: 12px 8px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; font-size: 0.85rem; }
         .analysis-box .val { font-size: 1.5rem; font-weight: 900; margin-top: 6px; display: block; }
 
@@ -293,7 +192,7 @@
         .report-table { width: 100%; border-collapse: collapse; }
         .report-table th, .report-table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.82rem; }
         .report-table th { background: #edf2f7; color: var(--primary); font-weight: bold; position: sticky; top: 0; }
-        .table-wrapper { overflow-x: auto; max-height: 300px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
+        .table-wrapper { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; margin-bottom: 20px; }
 
         .btn-danger-zone { background: #fff5f5; border: 1px dashed var(--danger); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-top: 30px; flex-wrap: wrap; gap: 10px; }
         .btn-reset { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
@@ -317,16 +216,13 @@
             <h2>① 商品をタップしてください</h2>
             <div class="menu-grid" id="menu-grid"></div>
         </div>
-
         <div class="card">
             <h2>② カート確認 🛒 <span id="pos-today-label">今日の日付</span></h2>
             <div class="cart-list" id="cart-list"></div>
-
             <div class="total-box">
                 <span class="label">キャッシュレス端末へ入力する金額</span>
                 <span class="amount" id="total-amount">¥0</span>
             </div>
-
             <div class="action-grid">
                 <button class="btn-checkout" id="btn-checkout" onclick="checkout()" disabled>決済完了 (記録)</button>
                 <button class="btn-clear" onclick="clearCart()">クリア</button>
@@ -351,59 +247,56 @@
 
         <div class="section-title">💵 日別・総合計売上金額</div>
         <div class="metrics-grid-3">
-            <div class="metric-box-sales" id="box-day1">
-                <div style="color: #4a5568; font-weight: bold;" id="label-day1">1日目の売上</div>
+            <div class="metric-box-sales">
+                <div style="color:#4a5568; font-weight:bold;" id="label-day1">1日目の売上</div>
                 <div class="val" id="sales-day1">¥0</div>
             </div>
-            <div class="metric-box-sales" id="box-day2">
-                <div style="color: #4a5568; font-weight: bold;" id="label-day2">2日目の売上</div>
+            <div class="metric-box-sales">
+                <div style="color:#4a5568; font-weight:bold;" id="label-day2">2日目の売上</div>
                 <div class="val" id="sales-day2">¥0</div>
             </div>
             <div class="metric-box-sales total-active">
-                <div style="color: #319795; font-weight: bold;">総売上合計（2日間）</div>
+                <div style="color:#319795; font-weight:bold;">総売上合計（2日間）</div>
                 <div class="val" id="sales-grand-total">¥0</div>
             </div>
         </div>
 
         <div class="section-title">👥 日別・総合計来客数</div>
         <div class="metrics-grid-3">
-            <div class="metric-box-sales" id="cust-box-day1">
-                <div style="color: #4a5568; font-weight: bold;" id="cust-label-day1">1日目の来客数</div>
+            <div class="metric-box-sales">
+                <div style="color:#4a5568; font-weight:bold;" id="cust-label-day1">1日目の来客数</div>
                 <div class="val" id="cust-day1">0 組</div>
             </div>
-            <div class="metric-box-sales" id="cust-box-day2">
-                <div style="color: #4a5568; font-weight: bold;" id="cust-label-day2">2日目の来客数</div>
+            <div class="metric-box-sales">
+                <div style="color:#4a5568; font-weight:bold;" id="cust-label-day2">2日目の来客数</div>
                 <div class="val" id="cust-day2">0 組</div>
             </div>
             <div class="metric-box-sales total-active">
-                <div style="color: #319795; font-weight: bold;">総来客数合計（2日間）</div>
+                <div style="color:#319795; font-weight:bold;">総来客数合計（2日間）</div>
                 <div class="val" id="cust-grand-total">0 組</div>
             </div>
         </div>
 
-        <div class="section-title">📦 <span id="item-date-title">選択日</span> の品目別販売個数</div>
-        <div class="item-count-grid">
-            <div class="item-count-box" style="background: #eff6ff; color: #1e40af; border-color: #bfdbfe;">
-                <div>🥤 アイスコーヒー</div>
-                <span class="num" id="count-ice-coffee">0</span>
-            </div>
-            <div class="item-count-box" style="background: #fff7ed; color: #9a3412; border-color: #ffedd5;">
-                <div>☕ ホットコーヒー</div>
-                <span class="num" id="count-hot-coffee">0</span>
-            </div>
-            <div class="item-count-box" style="background: #fdf2f8; color: #9d174d; border-color: #fce7f3;">
-                <div>🍫🍰 チョコケーキ</div>
-                <span class="num" id="count-cake">0</span>
-            </div>
-            <div class="item-count-box" style="background: #f0fdf4; color: #166534; border-color: #bbf7d0;">
-                <div>🍨 アイスクリーム</div>
-                <span class="num" id="count-ice-cream">0</span>
-            </div>
+        <div class="section-title">📦 品目別販売個数（1日目 / 2日目 / 合計）</div>
+        <div class="table-wrapper">
+            <table class="item-compare-table">
+                <thead>
+                    <tr>
+                        <th>商品</th>
+                        <th id="item-label-day1">1日目</th>
+                        <th id="item-label-day2">2日目</th>
+                        <th>合計</th>
+                        <th>前日比</th>
+                    </tr>
+                </thead>
+                <tbody id="item-compare-tbody"></tbody>
+                <tfoot id="item-compare-tfoot"></tfoot>
+            </table>
         </div>
 
         <div class="section-title">☀️ HOT vs ICE 比率（表示中の日）</div>
         <div class="weather-analysis-card">
-            <div style="font-size: 0.85rem; color: #475569; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+            <div style="font-size:0.85rem; color:#475569; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
                 <span>🔥 ホット累計: <strong id="txt-hot-total" style="color:#c2410c;">0個</strong></span>
                 <span>🧊 アイス累計: <strong id="txt-ice-total" style="color:#0369a1;">0個</strong></span>
             </div>
@@ -414,16 +307,13 @@
         </div>
 
         <div class="section-title">🕒 時間帯別 詳細集計データ</div>
-
         <div class="toggle-container">
             <button class="btn-toggle active" id="toggle-30" onclick="changeInterval(30)">30分きざみ</button>
             <button class="btn-toggle" id="toggle-60" onclick="changeInterval(60)">60分きざみ</button>
         </div>
-
         <div class="day-tabs" id="admin-day-tabs"></div>
-
-        <div style="margin-bottom: 10px; font-weight: bold; font-size: 0.9rem; color: #475569;">
-            📊 表示中: <span id="current-view-date-label" style="color: var(--secondary);"></span>
+        <div style="margin-bottom:10px; font-weight:bold; font-size:0.9rem; color:#475569;">
+            📊 表示中: <span id="current-view-date-label" style="color:var(--secondary);"></span>
             ( 客数: <span id="current-view-cust-total">0</span> 組 )
         </div>
         <div class="table-wrapper">
@@ -436,7 +326,7 @@
                         <th>ケーキ</th>
                         <th>アイスクリーム</th>
                         <th>売上</th>
-                        <th style="color: var(--success);">客数</th>
+                        <th style="color:var(--success);">客数</th>
                     </tr>
                 </thead>
                 <tbody id="hourly-tbody"></tbody>
@@ -444,23 +334,32 @@
         </div>
 
         <div class="section-title">💡 客層・購入スタイル分析（表示中の日）</div>
-        <div class="analysis-grid">
-            <div class="analysis-box" style="background: #fef08a; border-color: #fde047; color: #854d0e;">
-                <strong>☕🍰 珈琲＆ケーキのセット買い</strong>
+        <div class="analysis-grid-4">
+            <div class="analysis-box" style="background:#fef08a; border-color:#fde047; color:#854d0e;">
+                <strong>☕🍰 セット買い<br>（珈琲＋ケーキ）</strong>
                 <span class="val" id="pattern-set">0 回</span>
             </div>
-            <div class="analysis-box" style="background: #e0f2fe; border-color: #bae6fd; color: #075985;">
-                <strong>☝️ 1つだけ単品買い</strong>
+            <div class="analysis-box" style="background:#e0f2fe; border-color:#bae6fd; color:#075985;">
+                <strong>☝️ 単品買い<br>（1個のみ）</strong>
                 <span class="val" id="pattern-single">0 組</span>
             </div>
-            <div class="analysis-box" style="background: #f1f5f9; border-color: #cbd5e1; color: #475569;">
-                <strong>🛍️ その他</strong>
+            <div class="analysis-box" style="background:#f1f5f9; border-color:#cbd5e1; color:#475569;">
+                <strong>🛍️ その他<br>（まとめ買い等）</strong>
                 <span class="val" id="pattern-other">0 組</span>
             </div>
+            <div class="analysis-box" style="background:#f0fdf4; border-color:#bbf7d0; color:#166534;">
+                <strong>🧾 1組あたり<br>平均購入個数</strong>
+                <span class="val" id="pattern-avg">0.0 個</span>
+            </div>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:20px; font-size:0.85rem; color:#475569;">
+            💬 セット買い率: <strong id="pattern-set-rate" style="color:#854d0e;">0%</strong> &nbsp;|&nbsp;
+            単品率: <strong id="pattern-single-rate" style="color:#075985;">0%</strong> &nbsp;|&nbsp;
+            食べ物も買った割合: <strong id="pattern-food-rate" style="color:#166534;">0%</strong>
         </div>
 
         <div class="btn-danger-zone">
-            <div style="color: var(--danger); font-weight: bold; font-size: 0.9rem;">⚠️ データの全消去（すべての日のデータが消えます）</div>
+            <div style="color:var(--danger); font-weight:bold; font-size:0.9rem;">⚠️ データの全消去（すべての日のデータが消えます）</div>
             <button class="btn-reset" onclick="resetAllData()">全データリセット</button>
         </div>
     </div>
@@ -468,16 +367,16 @@
 
 <script>
     const MENU_ITEMS = [
-        { id: 'ice_coffee', name: 'アイスコーヒー', price: 150, icon: '🥤', btnClass: 'btn-ice-coffee' },
-        { id: 'hot_coffee', name: 'ホットコーヒー', price: 150, icon: '☕', btnClass: 'btn-hot-coffee' },
-        { id: 'chocolate_cake', name: 'チョコケーキ', price: 200, icon: '🍰', btnClass: 'btn-cake' },
-        { id: 'ice_cream', name: 'アイスクリーム', price: 400, icon: '🍨', btnClass: 'btn-ice-cream' }
+        { id: 'ice_coffee',      name: 'アイスコーヒー', price: 150, icon: '🥤', btnClass: 'btn-ice-coffee' },
+        { id: 'hot_coffee',      name: 'ホットコーヒー', price: 150, icon: '☕', btnClass: 'btn-hot-coffee' },
+        { id: 'chocolate_cake',  name: 'チョコケーキ',   price: 200, icon: '🍰', btnClass: 'btn-cake' },
+        { id: 'ice_cream',       name: 'アイスクリーム', price: 400, icon: '🍨', btnClass: 'btn-ice-cream' }
     ];
 
     function getTodayString() {
         const d = new Date();
-        const weeks = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
-        return `${d.getMonth() + 1}月${d.getDate()}日${weeks[d.getDay()]}`;
+        const weeks = ["日曜日","月曜日","火曜日","水曜日","木曜日","金曜日","土曜日"];
+        return `${d.getMonth()+1}月${d.getDate()}日${weeks[d.getDay()]}`;
     }
 
     let todayKey = getTodayString();
@@ -485,20 +384,26 @@
     let cart = {};
     let isAdminMode = false;
     let currentInterval = 30;
+    let salesData = {};
 
-    let salesData = JSON.parse(localStorage.getItem('salegian_final_v12')) || {};
-    if (!salesData[todayKey]) salesData[todayKey] = [];
+    // Firebaseからデータが来たら反映
+    window._onDataReady = function(data) {
+        salesData = data;
+        if (!salesData[todayKey]) salesData[todayKey] = [];
+        document.getElementById('pos-today-label').innerText = todayKey;
+        if (isAdminMode) { renderTabs(); renderReport(); }
+    };
 
     function generateTimeSlots(interval) {
         const slots = [];
         let h = 9, m = 0;
         while (h < 17) {
             let eh = h, em = m + interval;
-            if (em >= 60) { eh += Math.floor(em / 60); em = em % 60; }
+            if (em >= 60) { eh += Math.floor(em/60); em = em%60; }
             slots.push({
                 labelClean: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}-${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`,
                 key: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`,
-                start: h * 60 + m, end: eh * 60 + em
+                start: h*60+m, end: eh*60+em
             });
             h = eh; m = em;
         }
@@ -510,13 +415,11 @@
         document.getElementById('menu-grid').innerHTML = MENU_ITEMS.map(item => `
             <button class="btn-touch-menu ${item.btnClass}" onclick="addToCart('${item.id}')">
                 <span class="menu-icon">${item.icon}</span>
-                <span style="letter-spacing: 0.5px;">${item.name}</span>
+                <span style="letter-spacing:0.5px;">${item.name}</span>
                 <span class="price">¥${item.price}</span>
             </button>
         `).join('');
         renderCart();
-        renderTabs();
-        renderReport();
     }
 
     function toggleAdminView() {
@@ -525,7 +428,6 @@
             if (pw === "9999") {
                 isAdminMode = true;
                 todayKey = getTodayString();
-                if (!salesData[todayKey]) salesData[todayKey] = [];
                 document.getElementById('page-pos').style.display = 'none';
                 document.getElementById('page-admin').classList.add('active');
                 document.getElementById('page-admin').style.display = 'block';
@@ -543,22 +445,22 @@
         }
     }
 
-    function addToCart(id) { cart[id] = (cart[id] || 0) + 1; renderCart(); }
+    function addToCart(id) { cart[id] = (cart[id]||0)+1; renderCart(); }
     function changeQty(id, amt) { if(cart[id]) { cart[id]+=amt; if(cart[id]<=0) delete cart[id]; renderCart(); } }
     function removeRow(id) { delete cart[id]; renderCart(); }
     function clearCart() { cart = {}; renderCart(); }
 
     function renderCart() {
-        const list = document.getElementById('cart-list');
+        const listEl = document.getElementById('cart-list');
         const ids = Object.keys(cart);
-        if(ids.length === 0) {
-            list.innerHTML = `<div class="cart-placeholder">カートは空です。<br>上の商品をタップしてください。</div>`;
+        if (ids.length === 0) {
+            listEl.innerHTML = `<div class="cart-placeholder">カートは空です。<br>上の商品をタップしてください。</div>`;
             document.getElementById('total-amount').innerText = "¥0";
             document.getElementById('btn-checkout').disabled = true;
             return;
         }
         let total = 0;
-        list.innerHTML = ids.map(id => {
+        listEl.innerHTML = ids.map(id => {
             const item = MENU_ITEMS.find(m => m.id === id);
             total += item.price * cart[id];
             return `
@@ -570,8 +472,7 @@
                         <button class="btn-qty" onclick="changeQty('${id}',1)">+</button>
                         <button class="btn-del" onclick="removeRow('${id}')">×</button>
                     </div>
-                </div>
-            `;
+                </div>`;
         }).join('');
         document.getElementById('total-amount').innerText = `¥${total.toLocaleString()}`;
         document.getElementById('btn-checkout').disabled = false;
@@ -579,47 +480,44 @@
 
     function checkout() {
         const now = new Date();
-        const minutes = now.getHours() * 60 + now.getMinutes();
+        const minutes = now.getHours()*60 + now.getMinutes();
         const referenceSlots = generateTimeSlots(30);
         let slotKey = "other";
-        for(const s of referenceSlots) {
-            if(minutes >= s.start && minutes < s.end) { slotKey = s.key; break; }
+        for (const s of referenceSlots) {
+            if (minutes >= s.start && minutes < s.end) { slotKey = s.key; break; }
         }
-        let pattern = "other";
-        const totalItemsCount = Object.values(cart).reduce((sum, q) => sum + q, 0);
-        const hasCoffee = ((cart['ice_coffee'] || 0) > 0 || (cart['hot_coffee'] || 0) > 0);
-        const hasCake = ((cart['chocolate_cake'] || 0) > 0);
-        if (hasCoffee && hasCake) { pattern = "set"; }
-        else if (totalItemsCount === 1) { pattern = "single"; }
+        const totalItemsCount = Object.values(cart).reduce((sum,q) => sum+q, 0);
+        const hasCoffee = (cart['ice_coffee']||0) > 0 || (cart['hot_coffee']||0) > 0;
+        const hasCake   = (cart['chocolate_cake']||0) > 0;
+        let pattern = hasCoffee && hasCake ? "set" : totalItemsCount === 1 ? "single" : "other";
 
         const tx = {
             slotKey, minutes, pattern,
             items: { ...cart },
-            total: Object.keys(cart).reduce((sum,id)=> sum + (MENU_ITEMS.find(m=>m.id===id).price * cart[id]), 0)
+            total: Object.keys(cart).reduce((sum,id) => sum + MENU_ITEMS.find(m=>m.id===id).price * cart[id], 0)
         };
+
         todayKey = getTodayString();
-        if(!salesData[todayKey]) salesData[todayKey] = [];
-        salesData[todayKey].push(tx);
-        localStorage.setItem('salegian_final_v12', JSON.stringify(salesData));
+        const fb = window._fb;
+        fb.push(fb.ref(fb.db, 'sales/' + todayKey), tx);
         clearCart();
+
         const toast = document.getElementById('toast');
         toast.classList.add('show');
-        setTimeout(() => { toast.classList.remove('show'); }, 1500);
+        setTimeout(() => toast.classList.remove('show'), 1500);
     }
 
     function undoLastTransaction() {
         const list = salesData[selectedDayKey] || [];
         if (list.length === 0) return;
         const lastTx = list[list.length - 1];
-        let itemsStr = Object.keys(lastTx.items).map(id => {
-            return `${MENU_ITEMS.find(m => m.id === id).name}×${lastTx.items[id]}`;
-        }).join(', ');
+        const itemsStr = Object.keys(lastTx.items).map(id =>
+            `${MENU_ITEMS.find(m=>m.id===id).name}×${lastTx.items[id]}`
+        ).join(', ');
         if (confirm(`【確認】直前の決済（¥${lastTx.total.toLocaleString()} [${itemsStr}]）を削除しますか？`)) {
-            list.pop();
-            salesData[selectedDayKey] = list;
-            localStorage.setItem('salegian_final_v12', JSON.stringify(salesData));
-            renderReport();
-            alert("直前の決済データを取り消しました。");
+            const fb = window._fb;
+            fb.remove(fb.ref(fb.db, 'sales/' + selectedDayKey + '/' + lastTx._fbKey))
+              .then(() => alert("直前の決済データを取り消しました。"));
         }
     }
 
@@ -634,10 +532,10 @@
         const container = document.getElementById('admin-day-tabs');
         const dates = Object.keys(salesData).sort();
         if (!dates.includes(todayKey)) dates.push(todayKey);
-        container.innerHTML = dates.map((dt, index) => {
-            const activeClass = (dt === selectedDayKey) ? 'active' : '';
-            return `<button class="btn-tab ${activeClass}" onclick="switchDayKey('${dt}')">${index + 1}日目 [${dt}]</button>`;
-        }).join('');
+        if (!dates.includes(selectedDayKey)) selectedDayKey = dates[0] || todayKey;
+        container.innerHTML = dates.map((dt, i) => `
+            <button class="btn-tab ${dt===selectedDayKey?'active':''}" onclick="switchDayKey('${dt}')">${i+1}日目 [${dt}]</button>
+        `).join('');
     }
 
     function switchDayKey(key) {
@@ -648,146 +546,165 @@
 
     function renderReport() {
         const dates = Object.keys(salesData).sort();
-        let day1Sales = 0, day2Sales = 0;
-        if(dates[0]) (salesData[dates[0]] || []).forEach(tx => day1Sales += tx.total);
-        if(dates[1]) (salesData[dates[1]] || []).forEach(tx => day2Sales += tx.total);
+        const d1 = dates[0] || null, d2 = dates[1] || null;
+
+        // 売上
+        let day1Sales=0, day2Sales=0;
+        if(d1) (salesData[d1]||[]).forEach(tx => day1Sales += tx.total);
+        if(d2) (salesData[d2]||[]).forEach(tx => day2Sales += tx.total);
         document.getElementById('sales-day1').innerText = `¥${day1Sales.toLocaleString()}`;
         document.getElementById('sales-day2').innerText = `¥${day2Sales.toLocaleString()}`;
-        document.getElementById('sales-grand-total').innerText = `¥${(day1Sales + day2Sales).toLocaleString()}`;
-        if(dates[0]) document.getElementById('label-day1').innerText = `1日目 (${dates[0]}) の売上`;
-        if(dates[1]) document.getElementById('label-day2').innerText = `2日目 (${dates[1]}) の売上`;
+        document.getElementById('sales-grand-total').innerText = `¥${(day1Sales+day2Sales).toLocaleString()}`;
+        if(d1) document.getElementById('label-day1').innerText = `1日目 (${d1}) の売上`;
+        if(d2) document.getElementById('label-day2').innerText = `2日目 (${d2}) の売上`;
 
-        let day1Cust = dates[0] ? (salesData[dates[0]] || []).length : 0;
-        let day2Cust = dates[1] ? (salesData[dates[1]] || []).length : 0;
-        document.getElementById('cust-day1').innerText = `${day1Cust} 組`;
-        document.getElementById('cust-day2').innerText = `${day2Cust} 組`;
-        document.getElementById('cust-grand-total').innerText = `${(day1Cust + day2Cust)} 組`;
-        if(dates[0]) document.getElementById('cust-label-day1').innerText = `1日目 (${dates[0]}) の来客数`;
-        if(dates[1]) document.getElementById('cust-label-day2').innerText = `2日目 (${dates[1]}) の来客数`;
+        // 来客数
+        const c1 = d1 ? (salesData[d1]||[]).length : 0;
+        const c2 = d2 ? (salesData[d2]||[]).length : 0;
+        document.getElementById('cust-day1').innerText = `${c1} 組`;
+        document.getElementById('cust-day2').innerText = `${c2} 組`;
+        document.getElementById('cust-grand-total').innerText = `${c1+c2} 組`;
+        if(d1) document.getElementById('cust-label-day1').innerText = `1日目 (${d1}) の来客数`;
+        if(d2) document.getElementById('cust-label-day2').innerText = `2日目 (${d2}) の来客数`;
 
-        document.getElementById('item-date-title').innerText = selectedDayKey;
-        document.getElementById('current-view-date-label').innerText = selectedDayKey;
+        // 品目別2日間比較
+        const itemDefs = [
+            { id:'ice_coffee',     label:'🥤 アイスコーヒー' },
+            { id:'hot_coffee',     label:'☕ ホットコーヒー' },
+            { id:'chocolate_cake', label:'🍰 チョコケーキ' },
+            { id:'ice_cream',      label:'🍨 アイスクリーム' },
+        ];
+        let d1Sum={ice_coffee:0,hot_coffee:0,chocolate_cake:0,ice_cream:0};
+        let d2Sum={ice_coffee:0,hot_coffee:0,chocolate_cake:0,ice_cream:0};
+        if(d1) (salesData[d1]||[]).forEach(tx => Object.keys(tx.items).forEach(id => { if(d1Sum.hasOwnProperty(id)) d1Sum[id]+=tx.items[id]; }));
+        if(d2) (salesData[d2]||[]).forEach(tx => Object.keys(tx.items).forEach(id => { if(d2Sum.hasOwnProperty(id)) d2Sum[id]+=tx.items[id]; }));
+        if(d1) document.getElementById('item-label-day1').innerText = `1日目\n${d1}`;
+        if(d2) document.getElementById('item-label-day2').innerText = `2日目\n${d2}`;
+        let d1T=0,d2T=0,grandT=0;
+        document.getElementById('item-compare-tbody').innerHTML = itemDefs.map(item => {
+            const v1=d1Sum[item.id], v2=d2Sum[item.id], tot=v1+v2;
+            d1T+=v1; d2T+=v2; grandT+=tot;
+            let diffText='-', diffClass='diff-same';
+            if(d1&&d2){ const diff=v2-v1; if(diff>0){diffText=`▲${diff}`;diffClass='diff-up';}else if(diff<0){diffText=`▼${Math.abs(diff)}`;diffClass='diff-down';}else{diffText='±0';} }
+            return `<tr><td>${item.label}</td><td>${v1}</td><td>${d2?v2:'-'}</td><td><strong>${d2?tot:v1}</strong></td><td class="${diffClass}">${diffText}</td></tr>`;
+        }).join('');
+        document.getElementById('item-compare-tfoot').innerHTML =
+            `<tr class="total-row"><td>合計（全商品）</td><td>${d1T}</td><td>${d2?d2T:'-'}</td><td>${d2?grandT:d1T}</td><td></td></tr>`;
 
+        // 表示中の日のデータ
         const list = salesData[selectedDayKey] || [];
         document.getElementById('btn-undo').disabled = (list.length === 0);
+        document.getElementById('current-view-date-label').innerText = selectedDayKey;
         document.getElementById('current-view-cust-total').innerText = list.length;
 
-        let patterns = { set: 0, single: 0, other: 0 };
-        let itemSum = { ice_coffee:0, hot_coffee:0, chocolate_cake:0, ice_cream:0 };
+        let patterns={set:0,single:0,other:0};
+        let itemSum={ice_coffee:0,hot_coffee:0,chocolate_cake:0,ice_cream:0};
         const targetSlots = generateTimeSlots(currentInterval);
-        let hourlySum = { other: { ice_coffee:0, hot_coffee:0, chocolate_cake:0, ice_cream:0, cash:0, customers: 0 } };
-        targetSlots.forEach(s => hourlySum[s.key] = { ice_coffee:0, hot_coffee:0, chocolate_cake:0, ice_cream:0, cash:0, customers: 0 });
+        let hourlySum={other:{ice_coffee:0,hot_coffee:0,chocolate_cake:0,ice_cream:0,cash:0,customers:0}};
+        targetSlots.forEach(s => hourlySum[s.key]={ice_coffee:0,hot_coffee:0,chocolate_cake:0,ice_cream:0,cash:0,customers:0});
 
         list.forEach(tx => {
             patterns[tx.pattern]++;
             let txMinutes = tx.minutes;
             if (txMinutes === undefined) {
                 const parts = tx.slotKey.split(':');
-                txMinutes = parts.length === 2 ? parseInt(parts[0])*60 + parseInt(parts[1]) : -1;
+                txMinutes = parts.length===2 ? parseInt(parts[0])*60+parseInt(parts[1]) : -1;
             }
-            let assignedSlotKey = "other";
-            for(const s of targetSlots) {
-                if(txMinutes >= s.start && txMinutes < s.end) { assignedSlotKey = s.key; break; }
-            }
-            const target = hourlySum[assignedSlotKey] || hourlySum["other"];
-            target.cash += tx.total;
-            target.customers += 1;
+            let assignedKey = "other";
+            for (const s of targetSlots) { if(txMinutes>=s.start && txMinutes<s.end){ assignedKey=s.key; break; } }
+            const target = hourlySum[assignedKey] || hourlySum["other"];
+            target.cash += tx.total; target.customers++;
             Object.keys(tx.items).forEach(id => {
                 const q = tx.items[id];
-                if(itemSum.hasOwnProperty(id)) itemSum[id] += q;
-                target[id] += q;
+                if(itemSum.hasOwnProperty(id)) itemSum[id]+=q;
+                target[id]+=q;
             });
         });
 
-        document.getElementById('count-ice-coffee').innerText = `${itemSum.ice_coffee} 個`;
-        document.getElementById('count-hot-coffee').innerText = `${itemSum.hot_coffee} 個`;
-        document.getElementById('count-cake').innerText = `${itemSum.chocolate_cake} 個`;
-        document.getElementById('count-ice-cream').innerText = `${itemSum.ice_cream} 個`;
-
+        // HOT/ICEバー
         const totalCoffee = itemSum.hot_coffee + itemSum.ice_coffee;
         document.getElementById('txt-hot-total').innerText = `${itemSum.hot_coffee}個`;
         document.getElementById('txt-ice-total').innerText = `${itemSum.ice_coffee}個`;
-        const barHotEl = document.getElementById('bar-hot');
-        const barIceEl = document.getElementById('bar-ice');
-        if (totalCoffee === 0) {
-            barHotEl.style.width = "50%"; barHotEl.innerText = "HOT 0%";
-            barIceEl.style.width = "50%"; barIceEl.innerText = "ICE 0%";
-        } else {
-            const hotPct = Math.round((itemSum.hot_coffee / totalCoffee) * 100);
-            const icePct = 100 - hotPct;
-            barHotEl.style.width = `${hotPct}%`; barHotEl.innerText = hotPct > 0 ? `HOT ${hotPct}%` : '';
-            barIceEl.style.width = `${icePct}%`; barIceEl.innerText = icePct > 0 ? `ICE ${icePct}%` : '';
+        const barHot=document.getElementById('bar-hot'), barIce=document.getElementById('bar-ice');
+        if(totalCoffee===0){ barHot.style.width="50%"; barHot.innerText="HOT 0%"; barIce.style.width="50%"; barIce.innerText="ICE 0%"; }
+        else {
+            const hp=Math.round(itemSum.hot_coffee/totalCoffee*100), ip=100-hp;
+            barHot.style.width=`${hp}%`; barHot.innerText=hp>0?`HOT ${hp}%`:'';
+            barIce.style.width=`${ip}%`; barIce.innerText=ip>0?`ICE ${ip}%`:'';
         }
 
+        // 時間帯別テーブル（全行常時表示）
         let hHtml = targetSlots.map(s => {
-            const h = hourlySum[s.key];
-            return `<tr><td><strong>${s.labelClean}</strong></td><td>${h.ice_coffee}</td><td>${h.hot_coffee}</td><td>${h.chocolate_cake}</td><td>${h.ice_cream}</td><td style="font-weight:bold;">¥${h.cash.toLocaleString()}</td><td style="color:var(--success); font-weight:bold;">${h.customers}組</td></tr>`;
+            const h=hourlySum[s.key];
+            return `<tr><td><strong>${s.labelClean}</strong></td><td>${h.ice_coffee}</td><td>${h.hot_coffee}</td><td>${h.chocolate_cake}</td><td>${h.ice_cream}</td><td style="font-weight:bold;">¥${h.cash.toLocaleString()}</td><td style="color:var(--success);font-weight:bold;">${h.customers}組</td></tr>`;
         }).join('');
-        if(hourlySum.other.cash > 0) {
-            const o = hourlySum.other;
-            hHtml += `<tr style="background:#fff5f5; color:var(--danger);"><td><strong>時間外</strong></td><td>${o.ice_coffee}</td><td>${o.hot_coffee}</td><td>${o.chocolate_cake}</td><td>${o.ice_cream}</td><td>¥${o.cash.toLocaleString()}</td><td>${o.customers}組</td></tr>`;
-        }
+        const o=hourlySum.other;
+        hHtml += `<tr style="background:#fff5f5; color:var(--danger);"><td><strong>⚠️ 時間外</strong></td><td>${o.ice_coffee}</td><td>${o.hot_coffee}</td><td>${o.chocolate_cake}</td><td>${o.ice_cream}</td><td>¥${o.cash.toLocaleString()}</td><td>${o.customers}組</td></tr>`;
         document.getElementById('hourly-tbody').innerHTML = hHtml;
 
+        // 購入スタイル
         document.getElementById('pattern-set').innerText = `${patterns.set} 回`;
         document.getElementById('pattern-single').innerText = `${patterns.single} 組`;
         document.getElementById('pattern-other').innerText = `${patterns.other} 組`;
+        const totalItems = list.reduce((sum,tx) => sum+Object.values(tx.items).reduce((s,q)=>s+q,0), 0);
+        document.getElementById('pattern-avg').innerText = `${list.length>0?(totalItems/list.length).toFixed(1):'0.0'} 個`;
+        const setRate  = list.length>0 ? Math.round(patterns.set/list.length*100) : 0;
+        const singleRate = list.length>0 ? Math.round(patterns.single/list.length*100) : 0;
+        const withFood = list.filter(tx=>(tx.items['chocolate_cake']||0)>0||(tx.items['ice_cream']||0)>0).length;
+        const foodRate = list.length>0 ? Math.round(withFood/list.length*100) : 0;
+        document.getElementById('pattern-set-rate').innerText = `${setRate}%`;
+        document.getElementById('pattern-single-rate').innerText = `${singleRate}%`;
+        document.getElementById('pattern-food-rate').innerText = `${foodRate}%`;
     }
 
     function exportToCSV() {
         const list = salesData[selectedDayKey] || [];
         const targetSlots = generateTimeSlots(currentInterval);
-        let hourlySum = { other: { ice_coffee:0, hot_coffee:0, chocolate_cake:0, ice_cream:0, cash:0, customers:0 } };
-        targetSlots.forEach(s => hourlySum[s.key] = { ice_coffee:0, hot_coffee:0, chocolate_cake:0, ice_cream:0, cash:0, customers:0 });
-        let patterns = { set: 0, single: 0, other: 0 };
+        let hourlySum={other:{ice_coffee:0,hot_coffee:0,chocolate_cake:0,ice_cream:0,cash:0,customers:0}};
+        targetSlots.forEach(s => hourlySum[s.key]={ice_coffee:0,hot_coffee:0,chocolate_cake:0,ice_cream:0,cash:0,customers:0});
+        let patterns={set:0,single:0,other:0};
         list.forEach(tx => {
             patterns[tx.pattern]++;
-            let txMinutes = tx.minutes;
-            if (txMinutes === undefined) {
-                const parts = tx.slotKey.split(':');
-                txMinutes = parts.length === 2 ? parseInt(parts[0])*60 + parseInt(parts[1]) : -1;
-            }
-            let assignedSlotKey = "other";
-            for(const s of targetSlots) {
-                if(txMinutes >= s.start && txMinutes < s.end) { assignedSlotKey = s.key; break; }
-            }
-            const target = hourlySum[assignedSlotKey] || hourlySum["other"];
-            target.customers += 1;
-            Object.keys(tx.items).forEach(id => {
-                target[id] += tx.items[id];
-                target.cash += MENU_ITEMS.find(m=>m.id===id).price * tx.items[id];
-            });
+            let txMinutes=tx.minutes;
+            if(txMinutes===undefined){ const p=tx.slotKey.split(':'); txMinutes=p.length===2?parseInt(p[0])*60+parseInt(p[1]):-1; }
+            let key="other";
+            for(const s of targetSlots){ if(txMinutes>=s.start&&txMinutes<s.end){key=s.key;break;} }
+            const target=hourlySum[key]||hourlySum["other"];
+            target.customers++;
+            Object.keys(tx.items).forEach(id=>{ target[id]+=tx.items[id]; target.cash+=MENU_ITEMS.find(m=>m.id===id).price*tx.items[id]; });
         });
 
-        let csvContent = "\uFEFF【客層・購入行動分析】\n";
-        csvContent += `セット買い,${patterns.set},回\n単品買い,${patterns.single},組\nその他,${patterns.other},組\n\n`;
-        csvContent += `【時間帯別詳細（${currentInterval}分間隔）】\n`;
-        csvContent += "時間帯,アイスコーヒー,ホットコーヒー,チョコケーキ,アイスクリーム,売上(円),客数\n";
-        targetSlots.forEach(s => {
-            const h = hourlySum[s.key];
-            csvContent += `${s.labelClean},${h.ice_coffee},${h.hot_coffee},${h.chocolate_cake},${h.ice_cream},${h.cash},${h.customers}\n`;
+        let csv="\uFEFF【客層・購入行動分析】\n";
+        csv+=`セット買い,${patterns.set},回\n単品買い,${patterns.single},組\nその他,${patterns.other},組\n\n`;
+        csv+=`【時間帯別詳細（${currentInterval}分間隔）】\n`;
+        csv+="時間帯,アイスコーヒー,ホットコーヒー,チョコケーキ,アイスクリーム,売上(円),客数\n";
+        let tIce=0,tHot=0,tCake=0,tCream=0,tCash=0,tCust=0;
+        targetSlots.forEach(s=>{
+            const h=hourlySum[s.key];
+            csv+=`${s.labelClean},${h.ice_coffee},${h.hot_coffee},${h.chocolate_cake},${h.ice_cream},${h.cash},${h.customers}\n`;
+            tIce+=h.ice_coffee; tHot+=h.hot_coffee; tCake+=h.chocolate_cake; tCream+=h.ice_cream; tCash+=h.cash; tCust+=h.customers;
         });
+        csv+=`合計,${tIce},${tHot},${tCake},${tCream},${tCash},${tCust}\n`;
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", `Salegian_${currentInterval}min_${selectedDayKey.replace(/[\(\)]/g, '')}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+        const link=document.createElement("a");
+        link.href=URL.createObjectURL(blob);
+        link.setAttribute("download",`Salesian_${currentInterval}min_${selectedDayKey.replace(/[（）()]/g,'')}.csv`);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
     function resetAllData() {
-        const inputPw = prompt("【重要】全データを初期化します。管理用パスワードを入力してください。");
-        if (inputPw === null) return;
-        if (inputPw !== "9999") { alert("パスワードが一致しません。"); return; }
-        salesData = {};
-        salesData[todayKey] = [];
-        localStorage.removeItem('salegian_final_v12');
-        selectedDayKey = todayKey;
-        renderTabs();
-        renderReport();
-        alert("すべてのデータをリセットしました。");
+        const pw=prompt("【重要】全データを初期化します。管理用パスワードを入力してください。");
+        if(pw===null) return;
+        if(pw!=="9999"){ alert("パスワードが一致しません。"); return; }
+        const fb=window._fb;
+        fb.remove(fb.ref(fb.db,'sales')).then(()=>{
+            salesData={};
+            selectedDayKey=todayKey;
+            renderTabs();
+            renderReport();
+            alert("すべてのデータをリセットしました。");
+        });
     }
 
     window.onload = init;
