@@ -194,12 +194,42 @@
         .report-table th { background: #edf2f7; color: var(--primary); font-weight: bold; position: sticky; top: 0; }
         .table-wrapper { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; margin-bottom: 20px; }
 
+
+        /* ログイン画面 */
+        #page-login {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 9999; padding: 20px; box-sizing: border-box;
+        }
+        #page-login h1 { color: white; font-size: 1.3rem; text-align: center; margin-bottom: 6px; }
+        #page-login p { color: var(--secondary); font-size: 0.9rem; margin-bottom: 30px; text-align: center; }
+        .login-box { background: white; padding: 30px 24px; border-radius: 20px; width: 100%; max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .login-box label { display: block; font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 6px; }
+        .login-box input { width: 100%; padding: 12px; font-size: 1.2rem; border: 2px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; text-align: center; letter-spacing: 4px; margin-bottom: 16px; outline: none; }
+        .login-box input:focus { border-color: var(--secondary); }
+        .btn-login { width: 100%; padding: 14px; background: var(--secondary); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 900; cursor: pointer; }
+        .btn-login:active { background: #008cc2; }
+        .login-error { color: var(--danger); font-size: 0.85rem; text-align: center; margin-top: 10px; min-height: 20px; }
         .btn-danger-zone { background: #fff5f5; border: 1px dashed var(--danger); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-top: 30px; flex-wrap: wrap; gap: 10px; }
         .btn-reset { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
+
+<div id="page-login">
+    <h1>☕ Salesian Setagaya Coffee Stand</h1>
+    <p>POS SYSTEM</p>
+    <div class="login-box">
+        <label>パスワードを入力してください</label>
+        <input type="password" id="login-input" maxlength="8" placeholder="••••"
+               onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="btn-login" onclick="doLogin()">ログイン</button>
+        <div class="login-error" id="login-error"></div>
+    </div>
+</div>
 <div class="navbar">
     <h1>Salesian Setagaya Coffee Stand</h1>
     <button class="btn-admin-trigger" id="nav-btn" onclick="toggleAdminView()">⚙️ 管理用</button>
@@ -366,6 +396,35 @@
 </div>
 
 <script>
+
+    // ========================================
+    // ▼▼▼ パスワード設定はここを変更 ▼▼▼
+    const PW_REGISTER = "1234";   // レジ用パスワード
+    const PW_ADMIN    = "9999";   // 管理画面用パスワード
+    // ▲▲▲ パスワード設定はここを変更 ▲▲▲
+    // ========================================
+
+    function doLogin() {
+        const input = document.getElementById('login-input').value;
+        if (input === PW_REGISTER || input === PW_ADMIN) {
+            document.getElementById('page-login').style.display = 'none';
+            if (input === PW_ADMIN) {
+                // 管理画面で直接入る
+                isAdminMode = true;
+                document.getElementById('page-pos').style.display = 'none';
+                document.getElementById('page-admin').classList.add('active');
+                document.getElementById('page-admin').style.display = 'block';
+                document.getElementById('nav-btn').innerText = "◀ レジ画面に戻る";
+                renderTabs();
+                renderReport();
+            }
+        } else {
+            document.getElementById('login-error').innerText = "パスワードが違います。";
+            document.getElementById('login-input').value = '';
+            document.getElementById('login-input').focus();
+        }
+    }
+
     const MENU_ITEMS = [
         { id: 'ice_coffee',      name: 'アイスコーヒー', price: 150, icon: '🥤', btnClass: 'btn-ice-coffee' },
         { id: 'hot_coffee',      name: 'ホットコーヒー', price: 150, icon: '☕', btnClass: 'btn-hot-coffee' },
@@ -425,7 +484,7 @@
     function toggleAdminView() {
         if (!isAdminMode) {
             const pw = prompt("パスワードを入力してください（裏メニュー）:");
-            if (pw === "9999") {
+            if (pw === PW_ADMIN) {
                 isAdminMode = true;
                 todayKey = getTodayString();
                 document.getElementById('page-pos').style.display = 'none';
@@ -696,7 +755,7 @@
     function resetAllData() {
         const pw=prompt("【重要】全データを初期化します。管理用パスワードを入力してください。");
         if(pw===null) return;
-        if(pw!=="9999"){ alert("パスワードが一致しません。"); return; }
+        if(pw!==PW_ADMIN){ alert("パスワードが一致しません。"); return; }
         const fb=window._fb;
         fb.remove(fb.ref(fb.db,'sales')).then(()=>{
             salesData={};
